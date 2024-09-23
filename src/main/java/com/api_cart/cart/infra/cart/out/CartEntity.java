@@ -1,0 +1,38 @@
+package com.api_cart.cart.infra.cart.out;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.api_cart.cart.domain.cart.util.CartConstants.CART_TABLE_NAME;
+
+@Entity
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+@Table(name = CART_TABLE_NAME)
+public class CartEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column
+    private Long user;
+
+    @Column
+    private LocalDate updateDate;
+
+    @Column
+    private LocalDate createDate;
+
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CartProductEntity> products = new ArrayList<>();
+
+    public void addProduct(CartProductEntity product) {
+        products.add(product);
+        product.setCart(this);
+    }
+}
