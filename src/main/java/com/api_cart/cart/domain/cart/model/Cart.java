@@ -2,18 +2,18 @@ package com.api_cart.cart.domain.cart.model;
 
 import lombok.ToString;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @ToString
 public class Cart {
     private Long id;
     private Long user;
-    private LocalDate updateDate;
-    private LocalDate createDate;
+    private LocalDateTime updateDate;
+    private LocalDateTime createDate;
     private List<CartProduct> products;
 
-    public Cart(Long id, Long user, LocalDate updateDate, LocalDate createDate, List<CartProduct> products) {
+    public Cart(Long id, Long user, LocalDateTime updateDate, LocalDateTime createDate, List<CartProduct> products) {
         this.id = id;
         this.user = user;
         this.updateDate = updateDate;
@@ -37,19 +37,19 @@ public class Cart {
         this.user = user;
     }
 
-    public LocalDate getUpdateDate() {
+    public LocalDateTime getUpdateDate() {
         return updateDate;
     }
 
-    public void setUpdateDate(LocalDate updateDate) {
+    public void setUpdateDate(LocalDateTime updateDate) {
         this.updateDate = updateDate;
     }
 
-    public LocalDate getCreateDate() {
+    public LocalDateTime getCreateDate() {
         return createDate;
     }
 
-    public void setCreateDate(LocalDate createDate) {
+    public void setCreateDate(LocalDateTime createDate) {
         this.createDate = createDate;
     }
 

@@ -20,6 +20,11 @@ public class CartAdapter implements ICartPersistencePort {
         return cartRepository.findByUser(userId).map(cartMapper::toCart);
     }
 
+    @Override
+    public void deleteArticleOfCart(Cart cart) {
+        addProductToCart(cart);
+    }
+
     public Cart createCart(Cart cart) {
         return cartMapper.toCart(cartRepository.save(cartMapper.toEntity(cart)));
     }

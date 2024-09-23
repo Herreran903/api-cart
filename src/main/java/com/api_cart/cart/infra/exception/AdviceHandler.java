@@ -1,9 +1,6 @@
 package com.api_cart.cart.infra.exception;
 
-import com.api_cart.cart.domain.cart.exception.ex.CartProductNotValidFieldException;
-import com.api_cart.cart.domain.cart.exception.ex.CategoryLimitExceededException;
-import com.api_cart.cart.domain.cart.exception.ex.StockNotAvailableException;
-import com.api_cart.cart.domain.cart.exception.ex.UserInvalidException;
+import com.api_cart.cart.domain.cart.exception.ex.*;
 import com.api_cart.cart.domain.error.ErrorDetail;
 import com.api_cart.cart.domain.util.GlobalExceptionMessage;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -90,6 +87,34 @@ public class AdviceHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(details);
     }
+
+    @ExceptionHandler(CartNotFoundByIdUserException.class)
+    public ResponseEntity<ExceptionDetails> handleCartNotFoundByIdUserException(CartNotFoundByIdUserException ex) {
+        ExceptionDetails details = new ExceptionDetails(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                "",
+                LocalDateTime.now(),
+                null
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(details);
+    }
+
+   @ExceptionHandler(ProductNotFoundByIdException.class)
+   public ResponseEntity<ExceptionDetails> handleProductNotFoundByIdException(ProductNotFoundByIdException ex) {
+       ExceptionDetails details = new ExceptionDetails(
+               HttpStatus.BAD_REQUEST.value(),
+               HttpStatus.BAD_REQUEST.getReasonPhrase(),
+               ex.getMessage(),
+               "",
+               LocalDateTime.now(),
+               null
+       );
+
+       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(details);
+   }
 
     //Auth
     @ExceptionHandler(AccessDeniedException.class)

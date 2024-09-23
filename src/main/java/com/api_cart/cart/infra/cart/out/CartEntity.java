@@ -3,7 +3,7 @@ package com.api_cart.cart.infra.cart.out;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,10 +23,10 @@ public class CartEntity {
     private Long user;
 
     @Column
-    private LocalDate updateDate;
+    private LocalDateTime updateDate;
 
     @Column
-    private LocalDate createDate;
+    private LocalDateTime createDate;
 
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartProductEntity> products = new ArrayList<>();
