@@ -1,10 +1,7 @@
 package com.api_cart.cart.domain.cart.usecase;
 
 import com.api_cart.cart.domain.cart.api.ICartServicePort;
-import com.api_cart.cart.domain.cart.exception.ex.CartProductNotValidFieldException;
-import com.api_cart.cart.domain.cart.exception.ex.CategoryLimitExceededException;
-import com.api_cart.cart.domain.cart.exception.ex.StockNotAvailableException;
-import com.api_cart.cart.domain.cart.exception.ex.UserInvalidException;
+import com.api_cart.cart.domain.cart.exception.ex.*;
 import com.api_cart.cart.domain.cart.model.Cart;
 import com.api_cart.cart.domain.cart.model.CartProduct;
 import com.api_cart.cart.domain.cart.spi.ICartPersistencePort;
@@ -14,6 +11,7 @@ import com.api_cart.cart.domain.cart.spi.IJwtAdapterPort;
 import com.api_cart.cart.domain.error.ErrorDetail;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +68,7 @@ public class CartUseCase implements ICartServicePort {
     }
 
     private Cart createCart(Long userId){
-        LocalDate date = LocalDate.now();
+        LocalDateTime date = LocalDateTime.now();
 
         Cart cart = new Cart(null, userId, date, date, List.of());
         return cartPersistencePort.createCart(cart);
@@ -106,7 +104,7 @@ public class CartUseCase implements ICartServicePort {
             currentCart.getProducts().add(cartProduct);
         }
 
-        currentCart.setUpdateDate(LocalDate.now());
+        currentCart.setUpdateDate(LocalDateTime.now());
     }
 
     private void validateCartCategories(Cart currentCart) {
@@ -145,5 +143,27 @@ public class CartUseCase implements ICartServicePort {
         validateCartCategories(currentCart);
 
         cartPersistencePort.addProductToCart(currentCart);
+    }
+
+    @Override
+    public void deleteArticleOfCart(Long productId, String token) {
+        Long userId = getUserIdFromToken(token);
+
+        Cart currentCart = cartPersistencePort.getCartByUserId(userId)
+                .orElseThrow(() -> new CartNotFoundByIdUserException(NO_FOUND_CART));
+
+        Optional<CartProduct> productToDelete = currentCart.getProducts().stream()
+                .filter(cartProduct -> cartProduct.getProduct().equals(productId))
+                .findFirst();
+
+        if (productToDelete.isPresent()) {
+            currentCart.getProducts().remove(productToDelete.get());
+            currentCart.setUpdateDate(LocalDateTime.now());
+        }
+        else {
+            throw new ProductNotFoundByIdException(NO_FOUND_PRODUCT);
+        }
+
+        cartPersistencePort.deleteArticleOfCart(currentCart);
     }
 }

@@ -28,5 +28,10 @@ public class CartExceptionMessage {
     public static final String EXCEEDED_CATEGORIES =
             "Cannot add more than 3 products in category: ";
 
+    public static final String NO_FOUND_PRODUCT =
+            "Product does not found";
+
+    public static final String NO_FOUND_CART =
+            "Cart does not found";
 
 }

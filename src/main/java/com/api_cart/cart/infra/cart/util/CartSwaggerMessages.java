@@ -5,7 +5,10 @@ public class CartSwaggerMessages {
         throw new AssertionError();
     }
 
-    public static final String INCREASE_CART_REQUEST_EXAMPLE =
+    public static final String ADD_CART_REQUEST_EXAMPLE =
             "{ \"product\": \"1\", " +
             "\"quantity\": \"2\"}";
+
+    public static final String REMOVE_CART_REQUEST_EXAMPLE =
+            "{ \"product\": \"1\"}";
 }

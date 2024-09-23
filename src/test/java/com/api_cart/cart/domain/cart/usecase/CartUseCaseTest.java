@@ -1,9 +1,6 @@
 package com.api_cart.cart.domain.cart.usecase;
 
-import com.api_cart.cart.domain.cart.exception.ex.CartProductNotValidFieldException;
-import com.api_cart.cart.domain.cart.exception.ex.CategoryLimitExceededException;
-import com.api_cart.cart.domain.cart.exception.ex.StockNotAvailableException;
-import com.api_cart.cart.domain.cart.exception.ex.UserInvalidException;
+import com.api_cart.cart.domain.cart.exception.ex.*;
 import com.api_cart.cart.domain.cart.model.Cart;
 import com.api_cart.cart.domain.cart.model.CartProduct;
 import com.api_cart.cart.domain.cart.spi.ICartPersistencePort;
@@ -21,8 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.api_cart.cart.domain.cart.exception.CartExceptionMessage.DATE_RESTOCK;
-import static com.api_cart.cart.domain.cart.exception.CartExceptionMessage.OUT_OF_STOCK;
+import static com.api_cart.cart.domain.cart.exception.CartExceptionMessage.*;
 import static com.api_cart.cart.domain.cart.util.CartConstants.MIN_QUANTITY_VALUE;
 import static com.api_cart.cart.utils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -192,5 +188,43 @@ class CartUseCaseTest {
         verify(cartPersistencePort, never()).addProductToCart(cart);
     }
 
+    @Test
+    void deleteArticleOfCartShouldRemoveProductWhenProductExists() {
+        cart.setProducts(new ArrayList<>());
+        cart.getProducts().add(cartProduct);
+        when(jwtAdapterPort.getUserId(VALID_TOKEN)).thenReturn(VALID_USER_ID);
+        when(cartPersistencePort.getCartByUserId(VALID_USER_ID)).thenReturn(Optional.of(cart));
 
+        cartUseCase.deleteArticleOfCart(VALID_PRODUCT_ID, VALID_TOKEN);
+
+        assertTrue(cart.getProducts().isEmpty());
+        verify(cartPersistencePort, times(1)).deleteArticleOfCart(cart);
+    }
+
+    @Test
+    void deleteArticleOfCartShouldThrowProductNotFoundWhenProductDoesNotExist() {
+        cart.setProducts(new ArrayList<>());
+        when(jwtAdapterPort.getUserId(VALID_TOKEN)).thenReturn(VALID_USER_ID);
+        when(cartPersistencePort.getCartByUserId(VALID_USER_ID)).thenReturn(Optional.of(cart));
+
+        ProductNotFoundByIdException exception = assertThrows(ProductNotFoundByIdException.class, () -> {
+            cartUseCase.deleteArticleOfCart(VALID_PRODUCT_ID, VALID_TOKEN);
+        });
+
+        assertEquals(NO_FOUND_PRODUCT, exception.getMessage());
+        verify(cartPersistencePort, never()).deleteArticleOfCart(any());
+    }
+
+    @Test
+    void deleteArticleOfCartShouldThrowCartNotFoundWhenCartDoesNotExist() {
+        when(jwtAdapterPort.getUserId(VALID_TOKEN)).thenReturn(VALID_USER_ID);
+        when(cartPersistencePort.getCartByUserId(VALID_USER_ID)).thenReturn(Optional.empty());
+
+        CartNotFoundByIdUserException exception = assertThrows(CartNotFoundByIdUserException.class, () -> {
+            cartUseCase.deleteArticleOfCart(VALID_PRODUCT_ID, VALID_TOKEN);
+        });
+
+        assertEquals(NO_FOUND_CART, exception.getMessage());
+        verify(cartPersistencePort, never()).deleteArticleOfCart(any());
+    }
 }

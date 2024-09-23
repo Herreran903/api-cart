@@ -6,11 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import static com.api_cart.cart.domain.cart.exception.CartExceptionMessage.EMPTY_PRODUCT;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProductIdRequest {
-    @NotNull
+    @NotNull(message = EMPTY_PRODUCT)
     private Long product;
 }
