@@ -79,10 +79,18 @@ public class CartUseCase implements ICartServicePort {
                 .orElseGet(() -> createCart(userId));
     }
 
+    private Integer getCurrentQuantityInCart(Cart cart, Long productId) {
+        return cart.getProducts().stream()
+                .filter(p -> p.getProduct().equals(productId))
+                .map(CartProduct::getQuantity)
+                .findFirst()
+                .orElse(MIN_QUANTITY_VALUE);
+    }
+
     private void validateStockProduct(Long productId, Integer quantity) {
         Integer stock = feignAdapterPort.getStockOfProduct(productId);
 
-        if (stock == null || stock <= 0){
+        if (stock == null || stock <= MIN_QUANTITY_VALUE){
             LocalDate restockDate = feignTransactionAdapterPort.getRestockDate(productId);
             throw new StockNotAvailableException(OUT_OF_STOCK, restockDate);
         }
@@ -90,7 +98,6 @@ public class CartUseCase implements ICartServicePort {
         if (stock < quantity)
             throw new StockNotAvailableException(NOT_ENOUGH_STOCK);
     }
-
 
     private void updateCart(Cart currentCart, CartProduct cartProduct) {
         Optional<CartProduct> existingProduct = currentCart.getProducts().stream()
@@ -118,7 +125,7 @@ public class CartUseCase implements ICartServicePort {
                 .collect(Collectors.groupingBy(category -> category, Collectors.counting()));
 
         categoryCount.forEach((category, count) -> {
-            if (count > 3)
+            if (count > MAX_CATEGORIES_VALUE)
                 throw new CategoryLimitExceededException(EXCEEDED_CATEGORIES + category);
         });
     }
@@ -130,11 +137,7 @@ public class CartUseCase implements ICartServicePort {
         Long userId = getUserIdFromToken(token);
         Cart currentCart = getOrCreateCart(userId);
 
-        Integer currentQuantityInCart = currentCart.getProducts().stream()
-                .filter(p -> p.getProduct().equals(cartProduct.getProduct()))
-                .map(CartProduct::getQuantity)
-                .findFirst()
-                .orElse(0);
+        Integer currentQuantityInCart = getCurrentQuantityInCart(currentCart, cartProduct.getProduct());
 
         validateStockProduct(cartProduct.getProduct(), cartProduct.getQuantity() + currentQuantityInCart);
 
@@ -145,24 +148,28 @@ public class CartUseCase implements ICartServicePort {
         cartPersistencePort.addProductToCart(currentCart);
     }
 
+    private Cart getCartByUserId(Long userId) {
+        return cartPersistencePort.getCartByUserId(userId)
+                .orElseThrow(() -> new CartNotFoundByIdUserException(NO_FOUND_CART));
+    }
+
+    private CartProduct getProductFromCart(Cart currentCart, Long productId) {
+        return currentCart.getProducts().stream()
+                .filter(cartProduct -> cartProduct.getProduct().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new ProductNotFoundByIdException(NO_FOUND_PRODUCT));
+    }
+
     @Override
     public void deleteArticleOfCart(Long productId, String token) {
         Long userId = getUserIdFromToken(token);
 
-        Cart currentCart = cartPersistencePort.getCartByUserId(userId)
-                .orElseThrow(() -> new CartNotFoundByIdUserException(NO_FOUND_CART));
+        Cart currentCart = getCartByUserId(userId);
 
-        Optional<CartProduct> productToDelete = currentCart.getProducts().stream()
-                .filter(cartProduct -> cartProduct.getProduct().equals(productId))
-                .findFirst();
+        CartProduct productToDelete = getProductFromCart(currentCart, productId);
 
-        if (productToDelete.isPresent()) {
-            currentCart.getProducts().remove(productToDelete.get());
-            currentCart.setUpdateDate(LocalDateTime.now());
-        }
-        else {
-            throw new ProductNotFoundByIdException(NO_FOUND_PRODUCT);
-        }
+        currentCart.getProducts().remove(productToDelete);
+        currentCart.setUpdateDate(LocalDateTime.now());
 
         cartPersistencePort.deleteArticleOfCart(currentCart);
     }

@@ -6,6 +6,7 @@ public class CartConstants {
     }
 
     public static final int MIN_QUANTITY_VALUE = 0;
+    public static final int MAX_CATEGORIES_VALUE = 3;
 
     public static final String CART_PRODUCT = "product";
     public static final String CART_QUANTITY = "quantity";
