@@ -3,23 +3,29 @@ package com.api_cart.cart.domain.cart.usecase;
 import com.api_cart.cart.domain.cart.exception.ex.*;
 import com.api_cart.cart.domain.cart.model.Cart;
 import com.api_cart.cart.domain.cart.model.CartProduct;
+import com.api_cart.cart.domain.cart.model.CartProductStock;
 import com.api_cart.cart.domain.cart.spi.ICartPersistencePort;
 import com.api_cart.cart.domain.cart.spi.IFeignStockAdapterPort;
 import com.api_cart.cart.domain.cart.spi.IFeignTransactionAdapterPort;
 import com.api_cart.cart.domain.cart.spi.IJwtAdapterPort;
+import com.api_cart.cart.domain.page.PageData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.api_cart.cart.domain.cart.exception.CartExceptionMessage.*;
 import static com.api_cart.cart.domain.cart.util.CartConstants.MIN_QUANTITY_VALUE;
+import static com.api_cart.cart.domain.util.GlobalConstants.*;
+import static com.api_cart.cart.domain.util.GlobalExceptionMessage.*;
 import static com.api_cart.cart.utils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -226,5 +232,133 @@ class CartUseCaseTest {
 
         assertEquals(NO_FOUND_CART, exception.getMessage());
         verify(cartPersistencePort, never()).deleteArticleOfCart(any());
+    }
+
+    @Test
+    void getCartPageInvalidOrderThrowsException() {
+        String invalidOrder = "INVALID";
+
+        CartPageNotValidFieldException exception = assertThrows(
+                CartPageNotValidFieldException.class,
+                () -> cartUseCase.getCartPage(VALID_PAGE, VALID_SIZE, invalidOrder, null, null, VALID_TOKEN)
+        );
+
+        assertTrue(exception.getErrors().stream()
+                .anyMatch(error -> error.getField().equals(ORDER) && error.getMessage().equals(INVALID_ORDER)));
+    }
+
+    @Test
+    void getCartPageInvalidPageThrowsException() {
+        Integer invalidPage = -1;
+
+        CartPageNotValidFieldException exception = assertThrows(
+                CartPageNotValidFieldException.class,
+                () -> cartUseCase.getCartPage(invalidPage, VALID_SIZE, ASC, null, null, VALID_TOKEN)
+        );
+
+        assertTrue(exception.getErrors().stream()
+                .anyMatch(error -> error.getField().equals(PAGE) && error.getMessage().equals(NO_NEGATIVE_PAGE)));
+    }
+
+    @Test
+    void getCartPageInvalidSizeThrowsException() {
+        Integer invalidSize = 0;
+
+        CartPageNotValidFieldException exception = assertThrows(
+                CartPageNotValidFieldException.class,
+                () -> cartUseCase.getCartPage(VALID_PAGE, invalidSize, ASC, null, null, VALID_TOKEN)
+        );
+
+        assertTrue(exception.getErrors().stream()
+                .anyMatch(error -> error.getField().equals(SIZE) && error.getMessage().equals(GREATER_ZERO_SIZE)));
+    }
+
+    @Test
+    void getCartPageWhenStockIsLessThanCartQuantityShouldGetRestockDate() {
+        Cart mockCart = new Cart(VALID_CART_ID, VALID_USER_ID, VALID_CREATE_DATE, VALID_UPDATE_DATE, List.of(
+                new CartProduct(VALID_PRODUCT_ID, VALID_QUANTITY)
+        ));
+        List<Long> productIds = List.of(VALID_PRODUCT_ID);
+
+        PageData<CartProductStock> mockPageData = new PageData<>(
+                List.of(new CartProductStock(
+                        VALID_PRODUCT_ID,
+                        VALID_QUANTITY - 1,
+                        null,
+                        null)),
+                0,
+                1,
+                true,
+                true,
+                false,
+                false
+        );
+
+        LocalDate mockRestockDate = LocalDate.now().plusDays(5);
+
+        when(jwtAdapterPort.getUserId(VALID_TOKEN)).thenReturn(VALID_USER_ID);
+        when(cartPersistencePort.getCartByUserId(VALID_USER_ID)).thenReturn(Optional.of(mockCart));
+        when(feignStockAdapterPort.getProductPage(VALID_PAGE, VALID_SIZE, ASC, null, null, productIds))
+                .thenReturn(mockPageData);
+        when(feignStockAdapterPort.getProductsPrice(anyList())).thenReturn(Map.of(VALID_PRODUCT_ID, new BigDecimal("100")));
+        when(feignTransactionAdapterPort.getRestockDate(VALID_PRODUCT_ID)).thenReturn(mockRestockDate);
+
+        PageData<CartProductStock> result = cartUseCase.getCartPage(VALID_PAGE, VALID_SIZE, ASC, null, null, VALID_TOKEN);
+
+        assertNotNull(result);
+        assertEquals(1, result.getData().size());
+        assertEquals(new BigDecimal("100"), result.getTotal());
+
+        assertEquals(mockRestockDate, result.getData().get(0).getRestockDate());
+
+        verify(jwtAdapterPort).getUserId(VALID_TOKEN);
+        verify(cartPersistencePort).getCartByUserId(VALID_USER_ID);
+        verify(feignStockAdapterPort).getProductPage(VALID_PAGE, VALID_SIZE, ASC, null, null, productIds);
+        verify(feignStockAdapterPort).getProductsPrice(productIds);
+        verify(feignTransactionAdapterPort).getRestockDate(VALID_PRODUCT_ID);
+    }
+
+    @Test
+    void getCartPageValidRequestSuccessfulResponse() {
+        Cart mockCart = new Cart(VALID_CART_ID, VALID_USER_ID, VALID_CREATE_DATE, VALID_UPDATE_DATE, List.of(
+                new CartProduct(VALID_PRODUCT_ID, VALID_QUANTITY)
+        ));
+        List<Long> productIds = List.of(VALID_PRODUCT_ID);
+
+        CartProductStock cartProductStock = new CartProductStock(
+                VALID_PRODUCT_ID,
+                VALID_QUANTITY,
+                null,
+                null);
+
+        cartProductStock.setName("PRODUCT");
+
+        PageData<CartProductStock> mockPageData = new PageData<>(
+                List.of(cartProductStock),
+                0,
+                1,
+                true,
+                true,
+                false,
+                false
+        );
+
+        when(jwtAdapterPort.getUserId(VALID_TOKEN)).thenReturn(VALID_USER_ID);
+        when(cartPersistencePort.getCartByUserId(VALID_USER_ID)).thenReturn(Optional.of(mockCart));
+        when(feignStockAdapterPort.getProductPage(VALID_PAGE, VALID_SIZE, ASC, null, null, productIds))
+                .thenReturn(mockPageData);
+        when(feignStockAdapterPort.getProductsPrice(anyList())).thenReturn(Map.of(VALID_PRODUCT_ID, new BigDecimal("100")));
+
+        PageData<CartProductStock> result = cartUseCase.getCartPage(VALID_PAGE, VALID_SIZE, ASC, null, null, VALID_TOKEN);
+
+        assertNotNull(result);
+        assertEquals(1, result.getData().size());
+        assertEquals(new BigDecimal("100"), result.getTotal());
+        assertEquals(cartProductStock.getName(), result.getData().get(0).getName());
+
+        verify(jwtAdapterPort).getUserId(VALID_TOKEN);
+        verify(cartPersistencePort).getCartByUserId(VALID_USER_ID);
+        verify(feignStockAdapterPort).getProductPage(VALID_PAGE, VALID_SIZE, ASC, null, null, productIds);
+        verify(feignStockAdapterPort).getProductsPrice(productIds);
     }
 }

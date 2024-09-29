@@ -1,6 +1,6 @@
 package com.api_cart.cart.domain.cart.exception;
 
-import static com.api_cart.cart.domain.cart.util.CartConstants.MIN_QUANTITY_VALUE;
+import static com.api_cart.cart.domain.cart.util.CartConstants.*;
 
 public class CartExceptionMessage {
     private CartExceptionMessage(){
@@ -34,4 +34,9 @@ public class CartExceptionMessage {
     public static final String NO_FOUND_CART =
             "Cart does not found";
 
+    public static final String INVALID_PROPERTY_FILTER =
+            "Filter must be '"+ PRODUCT_NAME +"'";
+
+    public static final String INVALID_PROPERTY_DIRECTION =
+            "Sort direction must be '"+ PRODUCT_CATEGORY +"' or '"+ PRODUCT_BRAND +"' ";
 }

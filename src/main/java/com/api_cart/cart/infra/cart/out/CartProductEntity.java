@@ -3,6 +3,7 @@ package com.api_cart.cart.infra.cart.out;
 import jakarta.persistence.*;
 import lombok.*;
 
+import static com.api_cart.cart.domain.cart.util.CartConstants.CART;
 import static com.api_cart.cart.domain.cart.util.CartConstants.CART_PRODUCT_TABLE_NAME;
 
 @Entity
@@ -15,8 +16,8 @@ public class CartProductEntity {
     private CartProductId id = new CartProductId();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("cart")
-    @JoinColumn(name = "cart")
+    @MapsId(CART)
+    @JoinColumn(name = CART)
     private CartEntity cart;
 
     @Column(nullable = false)

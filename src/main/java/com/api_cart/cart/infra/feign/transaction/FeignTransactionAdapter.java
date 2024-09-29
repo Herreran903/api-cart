@@ -15,6 +15,6 @@ public class FeignTransactionAdapter implements IFeignTransactionAdapterPort {
     @Override
     public LocalDate getRestockDate(Long productId) {
         ProductIdRequest productIdRequest = new ProductIdRequest(productId);
-        return transactionFeignClient.getRestocktionDate(productIdRequest).getRestockDate();
+        return transactionFeignClient.getRestockDate(productIdRequest).getRestockDate();
     }
 }

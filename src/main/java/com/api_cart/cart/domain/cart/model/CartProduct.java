@@ -1,8 +1,5 @@
 package com.api_cart.cart.domain.cart.model;
 
-import lombok.ToString;
-
-@ToString
 public class CartProduct {
     private Long product;
     private Integer quantity;

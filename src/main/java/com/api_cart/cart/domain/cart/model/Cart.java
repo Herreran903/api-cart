@@ -1,11 +1,8 @@
 package com.api_cart.cart.domain.cart.model;
 
-import lombok.ToString;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
-@ToString
 public class Cart {
     private Long id;
     private Long user;

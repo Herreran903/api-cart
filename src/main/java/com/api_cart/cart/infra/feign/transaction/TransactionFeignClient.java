@@ -11,5 +11,5 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(name = "${transaction.service.name}", url = "${transaction.service.url}", configuration = FeignClientInterceptor.class)
 public interface TransactionFeignClient {
     @PostMapping("${transaction.service.url.restoration}")
-    RestockDateResponse getRestocktionDate(@Valid @RequestBody ProductIdRequest productIdRequest);
+    RestockDateResponse getRestockDate(@Valid @RequestBody ProductIdRequest productIdRequest);
 }
