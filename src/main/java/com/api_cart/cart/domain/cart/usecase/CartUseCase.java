@@ -4,39 +4,39 @@ import com.api_cart.cart.domain.cart.api.ICartServicePort;
 import com.api_cart.cart.domain.cart.exception.ex.*;
 import com.api_cart.cart.domain.cart.model.Cart;
 import com.api_cart.cart.domain.cart.model.CartProduct;
+import com.api_cart.cart.domain.cart.model.CartProductStock;
 import com.api_cart.cart.domain.cart.spi.ICartPersistencePort;
 import com.api_cart.cart.domain.cart.spi.IFeignStockAdapterPort;
 import com.api_cart.cart.domain.cart.spi.IFeignTransactionAdapterPort;
 import com.api_cart.cart.domain.cart.spi.IJwtAdapterPort;
 import com.api_cart.cart.domain.error.ErrorDetail;
+import com.api_cart.cart.domain.page.PageData;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.api_cart.cart.domain.cart.exception.CartExceptionMessage.*;
 import static com.api_cart.cart.domain.cart.util.CartConstants.*;
-import static com.api_cart.cart.domain.util.GlobalExceptionMessage.INVALID_OBJECT;
-import static com.api_cart.cart.domain.util.GlobalExceptionMessage.INVALID_USER;
+import static com.api_cart.cart.domain.util.GlobalConstants.*;
+import static com.api_cart.cart.domain.util.GlobalExceptionMessage.*;
 
 public class CartUseCase implements ICartServicePort {
 
     private final ICartPersistencePort cartPersistencePort;
     private final IJwtAdapterPort jwtAdapterPort;
-    private final IFeignStockAdapterPort feignAdapterPort;
+    private final IFeignStockAdapterPort feignStockAdapterPort;
     private final IFeignTransactionAdapterPort feignTransactionAdapterPort;
 
     public CartUseCase(ICartPersistencePort cartPersistencePort,
                        IJwtAdapterPort jwtAdapterPort,
-                       IFeignStockAdapterPort feignAdapterPort,
+                       IFeignStockAdapterPort feignStockAdapterPort,
                        IFeignTransactionAdapterPort feignTransactionAdapterPort) {
         this.cartPersistencePort = cartPersistencePort;
         this.jwtAdapterPort = jwtAdapterPort;
-        this.feignAdapterPort = feignAdapterPort;
+        this.feignStockAdapterPort = feignStockAdapterPort;
         this.feignTransactionAdapterPort = feignTransactionAdapterPort;
     }
 
@@ -88,7 +88,7 @@ public class CartUseCase implements ICartServicePort {
     }
 
     private void validateStockProduct(Long productId, Integer quantity) {
-        Integer stock = feignAdapterPort.getStockOfProduct(productId);
+        Integer stock = feignStockAdapterPort.getStockOfProduct(productId);
 
         if (stock == null || stock <= MIN_QUANTITY_VALUE){
             LocalDate restockDate = feignTransactionAdapterPort.getRestockDate(productId);
@@ -119,7 +119,7 @@ public class CartUseCase implements ICartServicePort {
                         .map(CartProduct::getProduct)
                                 .toList();
 
-        List<String> categories = feignAdapterPort.getListCategoriesOfProducts(products);
+        List<String> categories = feignStockAdapterPort.getListCategoriesOfProducts(products);
 
         Map<String, Long> categoryCount = categories.stream()
                 .collect(Collectors.groupingBy(category -> category, Collectors.counting()));
@@ -172,5 +172,76 @@ public class CartUseCase implements ICartServicePort {
         currentCart.setUpdateDate(LocalDateTime.now());
 
         cartPersistencePort.deleteArticleOfCart(currentCart);
+    }
+
+    private void validateCartPage(Integer page, Integer size, String order) {
+        List<ErrorDetail> errors = new ArrayList<>();
+
+        if (!(ASC.equalsIgnoreCase(order) || DESC.equalsIgnoreCase(order)))
+            errors.add(new ErrorDetail(ORDER, INVALID_ORDER));
+
+        if (page < MIN_PAGE_NUMBER)
+            errors.add(new ErrorDetail(PAGE, NO_NEGATIVE_PAGE));
+
+        if (size < MIN_PAGE_SIZE)
+            errors.add(new ErrorDetail(SIZE, GREATER_ZERO_SIZE));
+
+        if (!errors.isEmpty())
+            throw new CartPageNotValidFieldException(INVALID_OBJECT, errors);
+    }
+
+    private void processCartProductStock(PageData<CartProductStock> cartProductStockPageData, List<Long> cartProducts, Cart cart) {
+        cartProductStockPageData.getData().forEach(cartProductStock -> {
+            if (!cartProducts.contains(cartProductStock.getProduct())) {
+                return;
+            }
+
+            int index = cartProducts.indexOf(cartProductStock.getProduct());
+            CartProduct cartProduct = cart.getProducts().get(index);
+
+            if (cartProductStock.getQuantity() <= MIN_QUANTITY_VALUE || cartProductStock.getQuantity() < cartProduct.getQuantity()) {
+                LocalDate restockDate = feignTransactionAdapterPort.getRestockDate(cartProductStock.getProduct());
+                cartProductStock.setRestockDate(restockDate);
+            }
+
+            cartProductStock.setQuantity(cartProduct.getQuantity());
+        });
+    }
+
+    private BigDecimal calculateTotalPrice(Cart cart, List<Long> products) {
+        Map<Long, BigDecimal> prices = feignStockAdapterPort.getProductsPrice(products);
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (CartProduct cartProduct : cart.getProducts()) {
+            Long productId = cartProduct.getProduct();
+            Integer quantity = cartProduct.getQuantity();
+
+            BigDecimal productPrice = prices.get(productId);
+            if (productPrice != null) {
+                total = total.add(productPrice.multiply(BigDecimal.valueOf(quantity)));
+            }
+        }
+
+        return total;
+    }
+
+    @Override
+    public PageData<CartProductStock> getCartPage(Integer page, Integer size, String order, String category, String brand, String token) {
+        validateCartPage(page, size, order);
+
+        Long userId = getUserIdFromToken(token);
+        Cart cart = getCartByUserId(userId);
+
+        List<Long> cartProducts = cart.getProducts().stream().map(CartProduct::getProduct).toList();
+
+        PageData<CartProductStock> cartProductStockPageData = feignStockAdapterPort.getProductPage(
+                page, size, order, category, brand, cartProducts);
+
+        processCartProductStock(cartProductStockPageData, cartProducts, cart);
+
+        cartProductStockPageData.setTotal(calculateTotalPrice(cart, cartProducts));
+
+        return cartProductStockPageData;
     }
 }

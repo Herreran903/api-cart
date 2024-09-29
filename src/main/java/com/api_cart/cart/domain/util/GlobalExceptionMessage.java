@@ -33,4 +33,13 @@ public final class GlobalExceptionMessage {
     public static final String INTERNAL_ERROR =
             "Internal server error in service";
 
+    public static final String INVALID_ORDER =
+            "Order must be 'ASC' or 'DESC'";
+
+    public static final String GREATER_ZERO_SIZE =
+            "Size must be greater than zero";
+
+    public static final String NO_NEGATIVE_PAGE =
+            "Page number must be non-negative";
+
 }

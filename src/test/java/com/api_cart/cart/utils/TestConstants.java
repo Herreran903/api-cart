@@ -15,5 +15,7 @@ public final class TestConstants {
     public static final Long VALID_PRODUCT_ID = 1L;
     public static final Integer VALID_QUANTITY = 1;
     public static final String VALID_TOKEN = "VALID_TOKEN";
+    public static final Integer VALID_PAGE = 0;
+    public static final Integer VALID_SIZE = 1;
 
 }

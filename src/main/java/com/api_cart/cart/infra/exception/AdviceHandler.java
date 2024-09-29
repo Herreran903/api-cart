@@ -102,6 +102,20 @@ public class AdviceHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(details);
     }
 
+    @ExceptionHandler(CartPageNotValidFieldException.class)
+    public ResponseEntity<ExceptionDetails> handleCartPageNotValidFieldException(CartPageNotValidFieldException ex) {
+        ExceptionDetails details = new ExceptionDetails(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                ex.getMessage(),
+                "",
+                LocalDateTime.now(),
+                ex.getErrors()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(details);
+    }
+
    @ExceptionHandler(ProductNotFoundByIdException.class)
    public ResponseEntity<ExceptionDetails> handleProductNotFoundByIdException(ProductNotFoundByIdException ex) {
        ExceptionDetails details = new ExceptionDetails(

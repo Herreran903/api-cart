@@ -8,16 +8,18 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
+import static com.api_cart.cart.domain.cart.util.CartConstants.*;
+
 @Mapper(componentModel = "spring")
 public interface ICartMapper {
-    @Mapping(target = "products", ignore = true)
+    @Mapping(target = PRODUCTS, ignore = true)
     CartEntity toEntity(Cart cart);
 
     Cart toCart(CartEntity cartEntity);
 
     CartProductEntity toProductEntity(CartProduct cartProduct);
 
-    @Mapping(target = "product", source = "id.product")
+    @Mapping(target = PRODUCT, source = PRODUCT_ID + "." + PRODUCT)
     CartProduct toCartProduct(CartProductEntity cartProductEntity);
 
     default List<CartProductEntity> toProductEntities(List<CartProduct> cartProducts, @Context CartEntity cartEntity) {
